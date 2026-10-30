@@ -4,6 +4,7 @@ import { useState } from 'react'
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  ClipboardCheck,
   Filter,
   History,
   Layers,
@@ -21,16 +22,19 @@ const MOVE_STYLE: Record<MouvementType, { label: string; icon: typeof Undo2; chi
   sortie: { label: 'Sortie', icon: ArrowUpFromLine, chip: 'bg-sky-100 text-sky-800', qty: 'text-foreground' },
   retour: { label: 'Retour', icon: Undo2, chip: 'bg-violet-100 text-violet-800', qty: 'text-violet-700' },
   rebut: { label: 'Rebut', icon: Trash2, chip: 'bg-red-100 text-red-700', qty: 'text-red-700' },
+  inventaire: { label: 'Ajustement inventaire', icon: ClipboardCheck, chip: 'bg-amber-100 text-amber-800', qty: 'text-amber-700' },
 }
 
 export function StockDetailPanel({
   article,
   onClose,
   onDiscard,
+  onQuickExit,
 }: {
   article: ArticleView
   onClose: () => void
   onDiscard: (articleId: string, lot: string) => void
+  onQuickExit: () => void
 }) {
   const [lotFilter, setLotFilter] = useState<string | null>(null)
   const total = article.lotsView.reduce((s, l) => s + l.quantite, 0)
@@ -55,14 +59,25 @@ export function StockDetailPanel({
             {article.lotsView.length > 1 ? 'lots' : 'lot'}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Fermer le détail"
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <X className="size-4" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onQuickExit}
+            disabled={article.utilisable === 0}
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
+          >
+            <ArrowUpFromLine className="size-3.5" aria-hidden />
+            Sortir un lot
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fermer le détail"
+            className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto">
@@ -201,6 +216,7 @@ export function StockDetailPanel({
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {date} · {time} · {mv.personne}
+                          {mv.motif && ` · ${mv.motif}`}
                         </p>
                       </div>
                       <span className={cn('shrink-0 text-sm font-semibold tabular-nums', style.qty)}>

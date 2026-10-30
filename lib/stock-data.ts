@@ -1,5 +1,5 @@
 export type Conservation = '15–25 °C' | '2–8 °C' | '≤ -20 °C'
-export type MouvementType = 'reception' | 'sortie' | 'retour' | 'rebut'
+export type MouvementType = 'reception' | 'sortie' | 'retour' | 'rebut' | 'inventaire'
 
 export type Lot = {
   numero: string
@@ -14,6 +14,7 @@ export type Mouvement = {
   lot: string
   quantite: number
   personne: string
+  motif?: string
 }
 
 export type Article = {

@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronRight } from 'lucide-react'
+import { ArrowUpFromLine, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDate, plural, type ArticleView } from '@/lib/stock-utils'
 import { ConservationChip, ExpiryBadge, StockBadge, StockGauge, STOCK_TONE } from './status'
@@ -10,11 +10,13 @@ export function StockTable({
   selectedId,
   onSelect,
   compact,
+  onQuickExit,
 }: {
   items: ArticleView[]
   selectedId: string | null
   onSelect: (id: string) => void
   compact: boolean
+  onQuickExit: (id: string) => void
 }) {
   return (
     <div className="overflow-hidden rounded-xl bg-card shadow-[0_1px_2px_rgba(15,41,38,0.06),0_4px_16px_-6px_rgba(15,41,38,0.12)]">
@@ -28,8 +30,8 @@ export function StockTable({
               <th scope="col" className="px-3 py-3 font-medium">Stock utilisable</th>
               <th scope="col" className="px-3 py-3 font-medium">Statut</th>
               <th scope="col" className="px-3 py-3 font-medium">Prochaine péremption</th>
-              <th scope="col" className="w-10 py-3 pr-4">
-                <span className="sr-only">Ouvrir</span>
+              <th scope="col" className="py-3 pl-3 pr-4 text-right font-medium">
+                Action
               </th>
             </tr>
           </thead>
@@ -108,14 +110,31 @@ export function StockTable({
                       <span className="text-muted-foreground">Aucun lot</span>
                     )}
                   </td>
-                  <td className="py-3.5 pr-4 text-right">
-                    <ChevronRight
-                      className={cn(
-                        'ml-auto size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5',
-                        selected && 'text-[#2a7a6e]',
-                      )}
-                      aria-hidden
-                    />
+                  <td className="py-3.5 pl-3 pr-4">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={a.utilisable === 0}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onQuickExit(a.id)
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        aria-label={`Sortir un lot de ${a.designation}`}
+                        title={a.utilisable === 0 ? 'Aucun lot utilisable' : 'Sortie rapide (lot FEFO pré-sélectionné)'}
+                        className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg bg-card px-2.5 text-xs font-medium text-foreground ring-1 ring-inset ring-border hover:bg-[#0f2926] hover:text-white hover:ring-[#0f2926] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
+                      >
+                        <ArrowUpFromLine className="size-3.5" aria-hidden />
+                        <span className={cn(compact && 'sr-only')}>Sortir</span>
+                      </button>
+                      <ChevronRight
+                        className={cn(
+                          'size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5',
+                          selected && 'text-[#2a7a6e]',
+                        )}
+                        aria-hidden
+                      />
+                    </div>
                   </td>
                 </tr>
               )

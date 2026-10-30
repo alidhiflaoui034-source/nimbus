@@ -15,6 +15,7 @@ export function StockCards({
   selectedId: string | null
   onSelect: (id: string) => void
   compact: boolean
+  onQuickExit?: (id: string) => void
 }) {
   return (
     <ul

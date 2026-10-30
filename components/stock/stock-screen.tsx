@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Download, PackageSearch, TriangleAlert } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { CheckCircle2, Download, PackageSearch, TriangleAlert, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ARTICLES, CURRENT_USER, type Article } from '@/lib/stock-data'
-import { TODAY_ISO, formatDate, toView, STOCK_LABEL } from '@/lib/stock-utils'
+import { useStock } from '@/lib/stock-store'
+import { TODAY_ISO, formatDate, plural, STOCK_LABEL } from '@/lib/stock-utils'
+import { QuickExitDialog } from './quick-exit-dialog'
 import { SummaryStrip, type QuickFilter } from './summary-strip'
 import { EMPTY_FILTERS, StockToolbar, type Filters, type ViewMode } from './stock-toolbar'
 import { StockTable } from './stock-table'
@@ -15,14 +16,22 @@ import { ExpiredLotsDialog } from './expired-lots-dialog'
 const uniq = (list: string[]) => [...new Set(list)].sort((a, b) => a.localeCompare(b, 'fr'))
 
 export function StockScreen() {
-  const [articles, setArticles] = useState<Article[]>(ARTICLES)
+  const { views, discardLots, exitLot } = useStock()
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const [quick, setQuick] = useState<QuickFilter>('all')
   const [view, setView] = useState<ViewMode>('table')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [expiredOpen, setExpiredOpen] = useState(false)
+  const [exitId, setExitId] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
 
-  const views = useMemo(() => articles.map(toView), [articles])
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 4000)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  const exitArticle = views.find((a) => a.id === exitId) ?? null
 
   const options = useMemo(
     () => ({
@@ -77,31 +86,6 @@ export function StockScreen() {
   const selected = views.find((a) => a.id === selectedId) ?? null
   const hasActiveFilters = quick !== 'all' || Object.values(filters).some(Boolean)
 
-  function discardLots(targets: { articleId: string; lot: string }[]) {
-    setArticles((prev) =>
-      prev.map((a) => {
-        const lots = targets.filter((t) => t.articleId === a.id).map((t) => t.lot)
-        if (lots.length === 0) return a
-        const removed = a.lots.filter((l) => lots.includes(l.numero))
-        return {
-          ...a,
-          lots: a.lots.filter((l) => !lots.includes(l.numero)),
-          mouvements: [
-            ...removed.map((l) => ({
-              id: `rebut-${a.id}-${l.numero}-${Date.now()}`,
-              date: `${TODAY_ISO} ${new Date().toTimeString().slice(0, 5)}`,
-              type: 'rebut' as const,
-              lot: l.numero,
-              quantite: -l.quantite,
-              personne: CURRENT_USER,
-            })),
-            ...a.mouvements,
-          ],
-        }
-      }),
-    )
-  }
-
   function exportCsv() {
     const header = ['Désignation', 'Référence', 'Code', 'Catégorie', 'Plateforme', 'Conservation', 'Stock utilisable', 'Unité', 'Seuil min', 'Stock cible', 'Statut', 'Prochaine péremption', 'Jours restants']
     const rows = filtered.map((a) => [
@@ -125,6 +109,7 @@ export function StockScreen() {
     selectedId,
     onSelect: (id: string) => setSelectedId((cur) => (cur === id ? null : id)),
     compact: Boolean(selected),
+    onQuickExit: setExitId,
   }
 
   return (
@@ -212,6 +197,7 @@ export function StockScreen() {
               article={selected}
               onClose={() => setSelectedId(null)}
               onDiscard={(articleId, lot) => discardLots([{ articleId, lot }])}
+              onQuickExit={() => setExitId(selected.id)}
             />
           </aside>
         </>
@@ -231,6 +217,36 @@ export function StockScreen() {
           }}
         />
       )}
+
+      {exitArticle && (
+        <QuickExitDialog
+          key={exitArticle.id}
+          article={exitArticle}
+          onClose={() => setExitId(null)}
+          onConfirm={(lot, qty, motif) => {
+            exitLot(exitArticle.id, lot, qty, motif)
+            setExitId(null)
+            setToast(`Sortie enregistrée : ${qty} ${plural(exitArticle.unite, qty)} · ${exitArticle.designation} · lot ${lot}`)
+          }}
+        />
+      )}
+
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-6 z-[60] flex justify-center px-4">
+        {toast && (
+          <div className="pointer-events-auto flex max-w-lg items-center gap-3 rounded-xl bg-[#0f2926] px-4 py-3 text-sm text-white shadow-xl animate-in fade-in slide-in-from-bottom-2">
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-300" aria-hidden />
+            <span className="min-w-0">{toast}</span>
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              aria-label="Fermer la notification"
+              className="ml-1 rounded p-0.5 text-white/70 hover:text-white"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

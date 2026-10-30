@@ -1,13 +1,15 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { AppSidebar } from '@/components/stock/app-sidebar'
+import { StockProvider } from '@/lib/stock-store'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  title: 'État du stock · StockLab',
+  title: { default: 'État du stock · StockLab', template: '%s · StockLab' },
   description:
     'StockLab — suivi du stock des réactifs et kits des salles d’analyses biologiques : lots, péremptions et mouvements.',
   generator: 'v0.app',
@@ -34,7 +36,12 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${geist.variable} ${geistMono.variable}`}>
       <body className="antialiased">
-        {children}
+        <StockProvider>
+          <div className="flex min-h-screen bg-background">
+            <AppSidebar />
+            <main className="flex min-w-0 flex-1">{children}</main>
+          </div>
+        </StockProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
